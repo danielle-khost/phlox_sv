@@ -37,8 +37,8 @@ vcf_filter:
 force_call:
     nodes: 1 
     threads: 8
-    mem_mb: 36000
-    time: 4320
+    mem_mb: 64000
+    time: 10080
 
 final_call:
     nodes: 1

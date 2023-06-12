@@ -29,8 +29,8 @@ def get_bam(wildcards):
 #Global rule
 rule all:
     input:
-        expand("results/{sample}_jasmerge_finalCall.vcf", sample=samples),
-#        "results/{sample}_jasmerge_finalCall.vcf"
+        expand("results/{sample}_survmerge_finalCall.vcf", sample=samples),
+        expand("results/{sample}_jasmerge_finalCall.vcf", sample=samples)
 
 
 #Rules
@@ -99,7 +99,7 @@ rule survMergeCallers:
     output:
         int_files + "{sample}_merged.vcf"
     resources:
-        mem_mb = lambda wildcards, attempt: attempt * 1.5 * res_config["vcf_merge"]["mem_mb"],
+        mem_mb = res_config["vcf_merge"]["mem_mb"],
         time = res_config["vcf_merge"]["time"]
     params:
         surv_path = config["survivor_path"],
@@ -169,10 +169,45 @@ rule jasMergeSamples:
     shell:
         """
         ls {input.vcfs} > {params.text}
-        jasmine file_list={params.text} out_file={output} --output_genotypes threads={threads}
+        jasmine file_list={params.text} out_file={output} --output_genotypes threads={threads} min_dist=1000
+        """
+
+rule survMergeSamples:
+    input:
+        vcfs = expand(int_files + "{sample}.sample_merged_filtered.vcf", sample=samples),
+    output:
+        "results/ALL_SAMPLES_SURVMERGE.vcf"
+    resources:
+        mem_mb = res_config["vcf_merge"]["mem_mb"],
+        time = res_config["vcf_merge"]["time"]
+    params:
+        surv_path = config["survivor_path"],
+        text = "all_vcfs.txt"
+    shell:
+        """
+        ls {input.vcfs} > {params.text}
+        {params.surv_path} merge {params.text} 1000 1 1 1 0 50 {output}
         """
 
 rule forceCall:
+    input:
+        ref = config["reference"],
+        bamfile = get_bam,
+        knownsv = "results/ALL_SAMPLES_SURVMERGE.vcf"
+    output:
+        vcf = "results/{sample}_survmerge_finalCall.vcf"
+    resources:
+        mem_mb = res_config["force_call"]["mem_mb"],
+        time = res_config["force_call"]["time"]
+    threads:
+        res_config['force_call']['threads']
+    conda:
+        "workflow/envs/sniffles.yaml"
+    shell:
+        "sniffles --threads {threads} --input {input.bamfile} --genotype-vcf {input.knownsv} --vcf {output.vcf}"
+
+
+rule jasForceCall:
     input:
         ref = config["reference"],
         bamfile = get_bam,
@@ -185,7 +220,7 @@ rule forceCall:
     threads:
         res_config['force_call']['threads']
     conda:
-        "workflow/envs/sniffles.yaml"
+        "workflow/envs/jasmine.yaml"
     shell:
         "sniffles --threads {threads} --input {input.bamfile} --genotype-vcf {input.knownsv} --vcf {output.vcf}"
 
