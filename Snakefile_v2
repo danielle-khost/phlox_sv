@@ -25,6 +25,7 @@ def get_bam(wildcards):
     bfile = samdict[wildcards.sample]['bamfile']
     return bfile
 
+ruleorder: vcfFilter > fixHeader
 
 #Global rule
 rule all:
@@ -220,7 +221,7 @@ rule jasForceCall:
     threads:
         res_config['force_call']['threads']
     conda:
-        "workflow/envs/jasmine.yaml"
+        "workflow/envs/sniffles.yaml"
     shell:
         "sniffles --threads {threads} --input {input.bamfile} --genotype-vcf {input.knownsv} --vcf {output.vcf}"
 
