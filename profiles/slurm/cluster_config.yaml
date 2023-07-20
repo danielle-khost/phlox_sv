@@ -48,13 +48,13 @@ jasMergeSamples:
     job-name: "jasmerge"
 
 survMergeSamples:
-    partition: "intermediate" 
+    partition: "holy-cow" 
     output: "workflow/logs/survmerge-%j.out"
     error: "workflow/logs/survmerge-%j.err"
     job-name: "survmerge"
 
 forceCall:
-    partition: "intermediate" 
+    partition: "holy-cow" 
     output: "workflow/logs/forcecall-%j.out"
     error: "workflow/logs/forcecall-%j.err"
     job-name: "forcecall"
@@ -64,3 +64,15 @@ jasForceCall:
     output: "workflow/logs/jasforcecall-%j.out"
     error: "workflow/logs/jasforcecall-%j.err"
     job-name: "jasforcecall"
+
+fixFinalHeader:
+    partition: "shared" 
+    output: "workflow/logs/fix-%j.out"
+    error: "workflow/logs/fix-%j.err"
+    job-name: "fix"
+
+finalSurvMerge:
+    partition: "holy-cow" 
+    output: "workflow/logs/finalsurvmerge-%j.out"
+    error: "workflow/logs/finalsurvmerge-%j.err"
+    job-name: "merge"

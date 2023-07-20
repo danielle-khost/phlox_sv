@@ -30,8 +30,8 @@ ruleorder: vcfFilter > fixHeader
 #Global rule
 rule all:
     input:
-        expand("results/{sample}_survmerge_finalCall.vcf", sample=samples),
-        expand("results/{sample}_jasmerge_finalCall.vcf", sample=samples)
+        expand("results/{sample}_survmerge_finalCall.fix.vcf", sample=samples),
+        "results/FINAL_SURVMERGE.vcf"
 
 
 #Rules
@@ -226,3 +226,39 @@ rule jasForceCall:
         "sniffles --threads {threads} --input {input.bamfile} --genotype-vcf {input.knownsv} --vcf {output.vcf}"
 
 
+rule fixFinalHeader:
+    input:
+        "results/{sample}_survmerge_finalCall.vcf"
+    output:
+        vcf =  "results/{sample}_survmerge_finalCall.fix.vcf"
+    resources:
+        mem_mb = res_config["vcf_filter"]["mem_mb"],
+        time = res_config["vcf_filter"]["time"]
+    conda:
+        "workflow/envs/bcftools.yaml"
+    params:
+        rename = temp("{sample}_rename.txt"),
+        trimvcf = temp("{sample}_trimmed.vcf")
+    shell:
+        """
+        echo "{wildcards.sample}" > {params.rename}
+        cut -f1-10 {input} > {params.trimvcf}
+        bcftools reheader -s {params.rename} {params.trimvcf} -o {output.vcf}
+        """
+
+rule finalSurvMerge:
+    input:
+        vcfs = expand("results/{sample}_survmerge_finalCall.fix.vcf", sample=samples),
+    output:
+        "results/FINAL_SURVMERGE.vcf"
+    resources:
+        mem_mb = 64000,
+        time = res_config["vcf_merge"]["time"]
+    params:
+        surv_path = config["survivor_path"],
+        text = "all_final_vcfs.txt"
+    shell:
+        """
+        ls {input.vcfs} > {params.text}
+        {params.surv_path} merge {params.text} 1000 1 1 1 0 50 {output}
+        """
