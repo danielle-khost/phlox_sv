@@ -116,24 +116,22 @@ rule vcfFilter:
     input:
         surv = int_files + "{sample}_merged.vcf",
     output:
-        survfilt = int_files + "{sample}_merged_filtered.vcf",
+        temp(int_files + "{sample}_merged_filtered.vcf"),
     resources:
         mem_mb = res_config["vcf_filter"]["mem_mb"],
         time = res_config["vcf_filter"]["time"]
     params:
         gaps = config["gap_bed"],
         surv_path = config["survivor_path"],
- #       survinter = int_files + "{sample}_merged_filtered.vcf",
- #       jasinter = int_files + "{sample}_jas_merge_filtered.vcf"
+        survinter = int_files + "{sample}_merged_filtered.vcf",
     conda:
         "workflow/envs/bcftools.yaml"
     shell:
         """
-        grep -v '<TRA>' {input.surv} | grep -v 'BND' | bcftools view -i 'SVLEN<100000' - > {output.survfilt}
+        grep -v '<TRA>' {input.surv} | grep -v 'BND' | bcftools view -i 'SVLEN<100000' - > {output}
         """
-
+# {params.surv_path} filter {params.survinter} {params.gaps} 50 -1 0 -1 {output.survfilt}
  #       {params.surv_path} filter {params.survinter} {params.gaps} 50 -1 0 -1 {output.survfilt}
- #       {params.surv_path} filter {params.jasinter} {params.gaps} 50 -1 0 -1 {output.jasfilt}
 
 rule fixHeader:
     input:
@@ -153,25 +151,6 @@ rule fixHeader:
         bcftools reheader -s {params.rename} {input} -o {output.vcf}
         """
 
-rule jasMergeSamples:
-    input:
-        vcfs = expand(int_files + "{sample}.sample_merged_filtered.vcf", sample=samples),
-    output:
-        "results/ALL_SAMPLES_JASMERGE.vcf"
-    conda:
-        "workflow/envs/jasmine.yaml"
-    resources:
-        mem_mb = res_config["jas_merge"]["mem_mb"],
-        time = res_config["jas_merge"]["time"]
-    params:
-        text = "all_vcfs2.txt"
-    threads:
-        res_config['jas_merge']['threads']
-    shell:
-        """
-        ls {input.vcfs} > {params.text}
-        jasmine file_list={params.text} out_file={output} --output_genotypes threads={threads} min_dist=1000
-        """
 
 rule survMergeSamples:
     input:
@@ -197,24 +176,6 @@ rule forceCall:
         knownsv = "results/ALL_SAMPLES_SURVMERGE.vcf"
     output:
         vcf = "results/{sample}_survmerge_finalCall.vcf"
-    resources:
-        mem_mb = res_config["force_call"]["mem_mb"],
-        time = res_config["force_call"]["time"]
-    threads:
-        res_config['force_call']['threads']
-    conda:
-        "workflow/envs/sniffles.yaml"
-    shell:
-        "sniffles --threads {threads} --input {input.bamfile} --genotype-vcf {input.knownsv} --vcf {output.vcf}"
-
-
-rule jasForceCall:
-    input:
-        ref = config["reference"],
-        bamfile = get_bam,
-        knownsv = "results/ALL_SAMPLES_JASMERGE.vcf"
-    output:
-        vcf = "results/{sample}_jasmerge_finalCall.vcf"
     resources:
         mem_mb = res_config["force_call"]["mem_mb"],
         time = res_config["force_call"]["time"]
